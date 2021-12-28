@@ -1,8 +1,56 @@
+// unsure how below line even got imported...
+// const { next } = require('../../../front-end/src/utils/date-time');
 const service = require('./reservations.service');
+const asyncErrorBoundary = require('../errors/asyncErrorBoundary');
 
 /**
  * List handler for reservation resources
  */
+
+
+const REQUIRED_PROPERTIES = [
+  'first_name',
+  'mobile_number',
+  'reservation_date',
+  'reservation_time',
+  'people'
+]
+
+const VALID_PROPERTIES = [...REQUIRED_PROPERTIES, 'last_name'];
+
+function onlyHasValidProperties(req, res, next) {
+  const { data = {} } = req.body;
+
+  const invalidFields = Object.keys(data).filter((field) => !VALID_PROPERTIES.includes(field));
+
+  if(invalidFields.length) {
+    return next({
+      status: 400,
+      message: `Request body contains invalid field(s): ${invalidFields.join(', ')}.`
+    })
+  }
+  res.locals.data = data;
+  next();
+}
+
+function hasRequiredProperties(properties) {
+  return function (req, res, next) {
+    const data = res.locals.data;
+    try {
+      properties.forEach((property) => {
+        if (!data[property]) {
+          const error = new Error(`A '${property}' property is required.`);
+          error.status = 400;
+          throw error;
+        }
+      });
+      next();
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
 async function list(req, res) {
   const { date } = req.query;
   if (date) {
@@ -15,7 +63,7 @@ async function list(req, res) {
 }
 
 async function create(req, res, next) {
-  const { data } = req.body;
+  const data = res.locals.data;
   // console.log(data)
   const presentDateUTC = new Date();
   // get timezone offset in ms
@@ -70,6 +118,6 @@ async function destroy(req, res) {
 
 module.exports = {
   list,
-  create,
+  create: [onlyHasValidProperties, hasRequiredProperties(REQUIRED_PROPERTIES), asyncErrorBoundary(create)],
   delete: destroy
 };

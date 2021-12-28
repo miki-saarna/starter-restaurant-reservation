@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { listReservations } from "../utils/api";
 import ErrorAlert from "../layout/ErrorAlert";
+// import useQuery from "../utils/useQuery";
 
 /**
  * Defines the dashboard page.
@@ -8,7 +10,18 @@ import ErrorAlert from "../layout/ErrorAlert";
  *  the date for which the user wants to view reservations.
  * @returns {JSX.Element}
  */
+
+// custom function/hook created to get value from query parameter
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
+
 function Dashboard({ date }) {
+
+
+  const query = useQuery();
+  date = query.get("date");
+
   const [reservations, setReservations] = useState([]);
   const [reservationsError, setReservationsError] = useState(null);
 
